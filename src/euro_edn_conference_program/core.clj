@@ -170,7 +170,6 @@
   (try
     (let [new-hash (hash data)
           old-hash (hash (read-string (slurp filename)))]
-      (println new-hash " / " old-hash)
       (not= new-hash old-hash))
    (catch Exception _ true))) 
 
@@ -189,7 +188,7 @@
     (set! *print-length* 10)
     (defonce conf "or2018")
     (defonce allusers (all-profiles (cf/db "EuroWeb") "EuroWeb"))
-    (def rawusers (filterusers allusers ca ch))
+    (defonce rawusers (filterusers allusers ca ch))
     (defonce umap (users-by-username "EuroWeb"))
     (defonce ca (convert-usernames all-coauthors umap conf))
     (defonce ch (convert-usernames all-chairs umap conf))
