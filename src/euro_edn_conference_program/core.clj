@@ -8,7 +8,7 @@
 
 (defn to-hashmap [k x]
   "Transforms a list of hashmaps in a hashmap of hasmaps using key k"
-  (reduce #(assoc %1 (k %2) (dissoc %2 k)) (hash-map) x))
+  (reduce #(assoc %1 (k %2) (dissoc %2 k)) (sorted-map) x))
 
 (defn extract-data-fn [f k]
   "Creates a function that extracts from the database with function f and makes a hashmap based on key k"
