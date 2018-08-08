@@ -1,8 +1,9 @@
 (ns euro-edn-conference-program.config)
 
 (def output-path "/path/to/output/files")
+(def userdb "databases-of-users")
 
-(defn db-spec [dbase]
+(defn db-spec [dbname]
   "Returns mysql connection information for database dbase"
   {:subprotocol "mysql"
    :subname (str "//server:port/" dbname)

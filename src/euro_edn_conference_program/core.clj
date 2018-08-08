@@ -154,10 +154,10 @@
         rawpapers (all-papers (cf/db conf) conf)
         rawsessions (all-sessions (cf/db conf) conf)
         rawstreams (all-streams (cf/db conf) conf)
-        umap (users-by-username "EuroWeb")
+        umap (users-by-username cf/userdb)
         ca (convert-usernames all-coauthors umap conf)   
         ch (convert-usernames all-chairs umap conf)  
-        allusers (all-profiles (cf/db "EuroWeb") "EuroWeb")
+        allusers (all-profiles (cf/db cf/userdb) cf/userdb)
         rawusers (filterusers allusers ca ch)]
     {:timeslots ts, 
      :streams (streams rawstreams rawsessions ts conf),
@@ -187,12 +187,12 @@
   (do
     (set! *print-length* 10)
     (defonce conf "or2018")
-    (defonce allusers (all-profiles (cf/db "EuroWeb") "EuroWeb"))
-    (defonce rawusers (filterusers allusers ca ch))
-    (defonce umap (users-by-username "EuroWeb"))
+    (defonce allusers (all-profiles (cf/db cf/userdb) cf/userdb))
+    (defonce umap (users-by-username cf/userdb))
     (defonce ca (convert-usernames all-coauthors umap conf))
     (defonce ch (convert-usernames all-chairs umap conf))
     (defonce rawpapers (all-papers (cf/db conf) conf))
     (defonce rawsessions (all-sessions (cf/db conf) conf))
     (defonce rawstreams (all-streams (cf/db conf) conf))
+    (defonce rawusers (filterusers allusers ca ch))
     (defonce ts (timeslots conf))))
