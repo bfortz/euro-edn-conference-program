@@ -13,10 +13,8 @@
 (defn extract-data-fn [f k]
   "Creates a function that extracts from the database with function f and makes a hashmap based on key k"
   (fn [conf]
-    (->> conf
-         (cf/db)            ;; gets the db connection
-         (f)                ;; calls sql query on the db
-         (to-hashmap k))))  ;; transforms to a hashmap 
+    (->> (f (cf/db conf))
+         (to-hashmap k))))
 
 (def timeslots (extract-data-fn all-timeslots :id))
 (def rooms (extract-data-fn all-rooms :track))
@@ -26,24 +24,21 @@
 (defn convert-usernames [f usermap conf]
   "Creates a function that extracts from the database with function f and converts usernames to id using hashmap usermap"
   (letfn [(username->id [x] 
-            (->> x
-                 (:user)  
+            (->> (:user x)
                  (get usermap)
-                 (:id)       
+                 (:id)
                  (assoc x :user)))]
-    (->> conf
-      (cf/db)              
-      (f)                 
+    (->> (f (cf/db conf))
       (map username->id))))
 
 (defn daytime->id [timeslots day time]
   (->> timeslots
        (filter #(and (= day (:day (second %)))
                      (= time (:time (second %)))))
-                 (first)
-                 (first)))
+       (first)
+       (first)))
 
-(defn streams [rawstreams rawsessions timeslots conf]
+(defn streams [rawstreams rawsessions timeslots]
   "Returns a hashmap of streams by id, with an embedded list of sessions ordered by timeslot"
   (letfn [(addsessions [x]
             "Adds list of sessions"
@@ -56,7 +51,7 @@
       (map addsessions)
       (to-hashmap :id)))) 
 
-(defn sessions [rawsessions rawpapers chairs timeslots conf]
+(defn sessions [rawsessions rawpapers chairs timeslots]
   "Returns a hashmap of sessions by id, with an embedded list of papers"
   (letfn [(addpapers [x]
             "Adds list of abstracts"
@@ -87,7 +82,7 @@
        (first)
        (:id)))
 
-(defn papers [rawpapers rawsessions authors conf]
+(defn papers [rawpapers rawsessions authors]
   "Returns a hashmap of papers by id, with session codes converted to session ids and an embedded list of authors"
   (letfn [(addsession [x] 
             "Replaces session code by session ids"
@@ -160,10 +155,10 @@
         allusers (all-profiles (cf/db cf/userdb) cf/userdb)
         rawusers (filterusers allusers ca ch)]
     {:timeslots ts, 
-     :streams (streams rawstreams rawsessions ts conf),
-     :sessions (sessions rawsessions rawpapers ch ts conf),
+     :streams (streams rawstreams rawsessions ts),
+     :sessions (sessions rawsessions rawpapers ch ts),
      :rooms (rooms conf),
-     :papers (papers rawpapers rawsessions ca conf),
+     :papers (papers rawpapers rawsessions ca),
      :users (users rawusers ca ch rawpapers rawsessions ts)}))
 
 (defn changed? [data filename]
