@@ -16,7 +16,6 @@
     (->> (f (cf/db conf))
          (to-hashmap k))))
 
-(def timeslots (extract-data-fn all-timeslots :id))
 (def rooms (extract-data-fn all-rooms :track))
 (def keywords (extract-data-fn all-keywords :id))
 (def users-by-username (extract-data-fn all-profiles :username))
@@ -61,13 +60,17 @@
 
 ;; Maps creation functions
 
-(defn timeslot-map [timeslots]
+(defn timeslot-map [rawtimeslots]
   "Converts a timeslot hash-indexed by id to a hashmap of ids indexed by day and time"
-  (reduce #(assoc-in %1 [(:day (second %2)) (:time (second %2))] (first %2)) (hash-map) timeslots))
+  (reduce #(assoc-in %1 [(:day %2) (:time %2)] (:id %2)) (hash-map) rawtimeslots))
 
-(defn stream-sessions-map [rawsessions timeslots]
+(defn timeslot-sessions-map [rawsessions timeslotmap]
+  "Creates a map of sessions associated to timeslots sorted by track"
+  (make-map rawsessions #(get-in timeslotmap [(:day %) (:time %)]) :id :track))
+
+(defn stream-sessions-map [rawsessions timeslotmap]
   "Creates a map of sessions associated to streams sorted by timeslot id"
-  (make-map rawsessions :cluster #(get-in timeslots (:day %) (:time %)) :id))
+  (make-map rawsessions :cluster #(+ (:track %) (* 100 (get-in timeslotmap [(:day %) (:time %)]))) :id))
 
 (defn session-papers-map [rawpapers sessionmap]
   "Creates a map of papers associated to sessions"
@@ -91,6 +94,11 @@
 
 
 ;; Data creation functions
+
+(defn timeslots [rawtimeslots timeslot-sessions]
+  (->> rawtimeslots
+       (map #(assoc % :sessions (get timeslot-sessions (:id %))))
+       (to-hashmap :id)))
 
 (defn streams [rawstreams stream-sessions]
   "Returns a hashmap of streams by id, with an embedded list of sessions ordered by timeslot"
@@ -138,11 +146,12 @@
 
 (defn program-data [conf]
   "Returns a hashmap with all the data of the program of conference conf"
-  (let [ts (timeslots conf)
-        tsmap (timeslot-map ts)
+  (let [rawtimeslots (all-timeslots (cf/db conf) conf)
+        tsmap (timeslot-map rawtimeslots)
         rawpapers (all-papers (cf/db conf) conf)
         rawsessions (all-sessions (cf/db conf) conf)
         sessionmap (to-hashmap :code rawsessions)
+        timeslot-sessions (timeslot-sessions-map rawsessions tsmap)
         rawstreams (all-streams (cf/db conf) conf)
         umap (users-by-username cf/userdb)
         stream-sessions (stream-sessions-map rawsessions tsmap)
@@ -156,7 +165,7 @@
         allusers (all-profiles (cf/db cf/userdb) cf/userdb)
         p (papers rawpapers sessionmap paper-authors)
         s (sessions rawsessions session-papers session-chairs tsmap)]
-    {:timeslots ts, 
+    {:timeslots (timeslots rawtimeslots timeslot-sessions) , 
      :streams (streams rawstreams stream-sessions),
      :sessions s, 
      :rooms (rooms conf),
@@ -184,8 +193,8 @@
   (do
     (set! *print-length* 10)
     (defonce conf "or2018")
-    (defonce ts (timeslots conf))
-    (defonce tsmap (timeslot-map ts))  
+    (defonce rawtimeslots (all-timeslots (cf/db conf) conf))
+    (defonce tsmap (timeslot-map rawtimeslots))
     (defonce allusers (all-profiles (cf/db cf/userdb) cf/userdb))
     (defonce umap (users-by-username cf/userdb))
     (defonce ca (convert-usernames all-coauthors umap conf))
@@ -194,6 +203,7 @@
     (defonce rawsessions (all-sessions (cf/db conf) conf))
     (defonce rawstreams (all-streams (cf/db conf) conf))
     (defonce sessionmap (to-hashmap :code rawsessions))
+    (defonce timeslot-sessions (timeslot-sessions-map rawsessions tsmap))
     (defonce stream-sessions (stream-sessions-map rawsessions tsmap))
     (defonce session-papers (session-papers-map rawpapers sessionmap))
     (defonce paper-authors (paper-authors-map ca))
