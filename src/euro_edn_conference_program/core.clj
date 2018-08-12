@@ -66,7 +66,7 @@
 
 (defn timeslot-sessions-map [rawsessions timeslotmap]
   "Creates a map of sessions associated to timeslots sorted by track"
-  (make-map rawsessions #(get-in timeslotmap [(:day %) (:time %)]) :id :track))
+  (make-map rawsessions #(get-in timeslotmap [(:day %) (:time %)]) :track :id))
 
 (defn stream-sessions-map [rawsessions timeslotmap]
   "Creates a map of sessions associated to streams sorted by timeslot id"
@@ -203,7 +203,7 @@
     (defonce rawsessions (all-sessions (cf/db conf) conf))
     (defonce rawstreams (all-streams (cf/db conf) conf))
     (defonce sessionmap (to-hashmap :code rawsessions))
-    (defonce timeslot-sessions (timeslot-sessions-map rawsessions tsmap))
+    (def timeslot-sessions (timeslot-sessions-map rawsessions tsmap))
     (defonce stream-sessions (stream-sessions-map rawsessions tsmap))
     (defonce session-papers (session-papers-map rawpapers sessionmap))
     (defonce paper-authors (paper-authors-map ca))
