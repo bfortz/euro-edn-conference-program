@@ -104,7 +104,8 @@
   "Returns a hashmap of streams by id, with an embedded list of sessions ordered by timeslot"
   (->> rawstreams
        (map #(assoc % :sessions (get stream-sessions (:id %))))
-       (to-hashmap :id))) 
+       (filter #(not (empty? (:sessions %))))
+       (to-hashmap :id)))
 
 (defn sessions [rawsessions session-papers session-chairs timeslots]
   "Returns a hashmap of sessions by id, with an embedded list of papers"
@@ -149,7 +150,8 @@
   (let [rawtimeslots (all-timeslots (cf/db conf) conf)
         tsmap (timeslot-map rawtimeslots)
         rawpapers (all-papers (cf/db conf) conf)
-        rawsessions (all-sessions (cf/db conf) conf)
+        rawsessions (->> (all-sessions (cf/db conf) conf)
+                         (filter #(some? (:day %))))
         sessionmap (to-hashmap :code rawsessions)
         timeslot-sessions (timeslot-sessions-map rawsessions tsmap)
         rawstreams (all-streams (cf/db conf) conf)
@@ -203,7 +205,7 @@
     (defonce rawsessions (all-sessions (cf/db conf) conf))
     (defonce rawstreams (all-streams (cf/db conf) conf))
     (defonce sessionmap (to-hashmap :code rawsessions))
-    (def timeslot-sessions (timeslot-sessions-map rawsessions tsmap))
+    (defonce timeslot-sessions (timeslot-sessions-map rawsessions tsmap))
     (defonce stream-sessions (stream-sessions-map rawsessions tsmap))
     (defonce session-papers (session-papers-map rawpapers sessionmap))
     (defonce paper-authors (paper-authors-map ca))
