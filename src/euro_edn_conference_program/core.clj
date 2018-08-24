@@ -190,7 +190,7 @@
         p (papers rawpapers sessionmap paper-authors)
         s (sessions rawsessions session-papers session-chairs tsmap)
         rawkeywords (all-keywords (cf/db conf) conf)
-        keyword-sessions (keyword-sessions-map s sessionmap rawpapers tsmap)]
+        keyword-sessions (keyword-sessions-map rawpapers s sessionmap tsmap)]
     {:timeslots (timeslots rawtimeslots timeslot-sessions) , 
      :streams (streams rawstreams stream-sessions),
      :sessions s, 
