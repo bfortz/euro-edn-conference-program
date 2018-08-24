@@ -171,6 +171,7 @@
      :streams (streams rawstreams stream-sessions),
      :sessions s, 
      :rooms (rooms conf),
+     :keywords (keywords conf),
      :papers p,
      :users (users allusers user-papers user-chairs p s)}))
 

@@ -16,7 +16,7 @@ select track, room from rooms
 
 -- :name all-keywords :? :*
 -- :doc Get all keywords
-select * from keywords
+select * from keyword
 
 -- :name all-papers :? :*
 -- :doc Get all accepted papers
