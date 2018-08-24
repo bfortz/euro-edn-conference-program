@@ -134,6 +134,7 @@
   "Returns a hashmap of keywords by id, with an embedded list of papers"
   (->> rawkeywords
        (map #(assoc % :papers (get keyword-papers (:id %))))
+       (filter #(not (empty? (:papers %))))
        (to-hashmap :id)))
 
 (defn users [allusers user-papers user-chairs papers sessions]
