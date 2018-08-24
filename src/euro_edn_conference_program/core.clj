@@ -33,17 +33,17 @@
 
 (defn sort-map-of-seqs-by [f m]
   "Sorts the seqs in a map m of seqs using function f"
-  (reduce #(assoc %1 (first %2) (sort-by f (second %2))) (hash-map) m))
+  (reduce #(assoc %1 (first %2) (sort-by f (second %2))) {} m))
 
 (defn inner-map [f m]
   "Apply f to all seqs in a map m of seqs"
-  (reduce #(assoc %1 (first %2) (map f (second %2))) (hash-map) m))
+  (reduce #(assoc %1 (first %2) (map f (second %2))) {} m))
 
 (defn seq-to-map [f s]
   "Returns a map with keys as the different values of applying f to the
   elements of s, and values the list of elements x in s for which (f x) equals
   the key"
-  (reduce #(update %1 (f %2) conj %2) (hash-map) s)) 
+  (reduce #(update %1 (f %2) conj %2) {} s)) 
 
 (defn make-map [s f sort-fn map-fn]
   "Returns a map with keys as the different values of applying f to the
@@ -61,7 +61,7 @@
 
 (defn timeslot-map [rawtimeslots]
   "Converts a timeslot hash-indexed by id to a hashmap of ids indexed by day and time"
-  (reduce #(assoc-in %1 [(:day %2) (:time %2)] (:id %2)) (hash-map) rawtimeslots))
+  (reduce #(assoc-in %1 [(:day %2) (:time %2)] (:id %2)) {} rawtimeslots))
 
 (defn timeslot-sessions-map [rawsessions timeslotmap]
   "Creates a map of sessions associated to timeslots sorted by track"
@@ -91,12 +91,22 @@
   "Creates a map of papers by users"
   (make-map authors :user :paper :paper))
 
-(defn keyword-papers-map [rawpapers]
+(defn keyword-sessions-map [rawpapers sessions sessionmap timeslotmap]
   "Creates a map of papers by keywords"
-  (-> (make-map rawpapers :keyword1 :id :id)
-      (into (make-map rawpapers :keyword2 :id :id))
-      (into (make-map rawpapers :keyword3 :id :id))
-      (dissoc 0)))
+  (letfn [(mm [f] 
+            (make-map rawpapers f :id (partial paper->sessionid sessionmap)))
+          (session-order [id] 
+            (let [s (get sessions id)]
+              (+ (:track s) (* 100 (:timeslot s)))))] 
+    (let [kw1 (mm :keyword1)
+          kw2 (mm :keyword2)
+          kw3 (mm :keyword3)
+          kws (->> kw1 
+                   (reduce #(update %1 (first %2) into (second %2)) kw2)
+                   (reduce #(update %1 (first %2) into (second %2)) kw3)
+                   (reduce #(assoc %1 (first %2) (set (second %2))) {}))]
+    (->> (dissoc kws 0)
+         (sort-map-of-seqs-by session-order))))) 
 
 ;; Data creation functions
 
@@ -130,11 +140,11 @@
        (map #(dissoc % :order :sessioncode))
        (to-hashmap :id)))
 
-(defn keywords [rawkeywords keyword-papers]
+(defn keywords [rawkeywords keyword-sessions]
   "Returns a hashmap of keywords by id, with an embedded list of papers"
   (->> rawkeywords
-       (map #(assoc % :papers (get keyword-papers (:id %))))
-       (filter #(not (empty? (:papers %))))
+       (map #(assoc % :sessions (get keyword-sessions (:id %))))
+       (filter #(not (empty? (:sessions %))))
        (to-hashmap :id)))
 
 (defn users [allusers user-papers user-chairs papers sessions]
@@ -180,12 +190,12 @@
         p (papers rawpapers sessionmap paper-authors)
         s (sessions rawsessions session-papers session-chairs tsmap)
         rawkeywords (all-keywords (cf/db conf) conf)
-        keyword-papers (keyword-papers-map rawpapers)]
+        keyword-sessions (keyword-sessions-map s sessionmap rawpapers tsmap)]
     {:timeslots (timeslots rawtimeslots timeslot-sessions) , 
      :streams (streams rawstreams stream-sessions),
      :sessions s, 
      :rooms (rooms conf),
-     :keywords (keywords rawkeywords keyword-papers),
+     :keywords (keywords rawkeywords keyword-sessions),
      :papers p,
      :users (users allusers user-papers user-chairs p s)}))
 
@@ -229,5 +239,5 @@
     (defonce user-chairs (user-chairs-map ch))
     (defonce p (papers rawpapers sessionmap paper-authors))
     (defonce rawkeywords (all-keywords (cf/db conf) conf))
-    (defonce keyword-papers (keyword-papers-map rawpapers))
-    (defonce s (sessions rawsessions session-papers session-chairs tsmap))))
+    (defonce s (sessions rawsessions session-papers session-chairs tsmap))
+    (defonce keyword-sessions (keyword-sessions-map rawpapers s sessionmap tsmap))))
