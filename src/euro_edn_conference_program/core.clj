@@ -17,7 +17,6 @@
          (to-hashmap k))))
 
 (def rooms (extract-data-fn all-rooms :track))
-(def keywords (extract-data-fn all-keywords :id))
 (def users-by-username (extract-data-fn all-profiles :username))
 
 ;; Helper functions
@@ -92,6 +91,12 @@
   "Creates a map of papers by users"
   (make-map authors :user :paper :paper))
 
+(defn keyword-papers-map [rawpapers]
+  "Creates a map of papers by keywords"
+  (-> (make-map rawpapers :keyword1 :id :id)
+      (into (make-map rawpapers :keyword2 :id :id))
+      (into (make-map rawpapers :keyword3 :id :id))
+      (dissoc 0)))
 
 ;; Data creation functions
 
@@ -123,6 +128,12 @@
        (map #(assoc % :session (paper->sessionid sessionmap %)))   
        (map #(assoc % :authors (get paper-authors (:id %))))
        (map #(dissoc % :order :sessioncode))
+       (to-hashmap :id)))
+
+(defn keywords [rawkeywords keyword-papers]
+  "Returns a hashmap of keywords by id, with an embedded list of papers"
+  (->> rawkeywords
+       (map #(assoc % :papers (get keyword-papers (:id %))))
        (to-hashmap :id)))
 
 (defn users [allusers user-papers user-chairs papers sessions]
@@ -166,12 +177,14 @@
         user-chairs (user-chairs-map ch)
         allusers (all-profiles (cf/db cf/userdb) cf/userdb)
         p (papers rawpapers sessionmap paper-authors)
-        s (sessions rawsessions session-papers session-chairs tsmap)]
+        s (sessions rawsessions session-papers session-chairs tsmap)
+        rawkeywords (all-keywords (cf/db conf) conf)
+        keyword-papers (keyword-papers-map rawpapers)]
     {:timeslots (timeslots rawtimeslots timeslot-sessions) , 
      :streams (streams rawstreams stream-sessions),
      :sessions s, 
      :rooms (rooms conf),
-     :keywords (keywords conf),
+     :keywords (keywords rawkeywords keyword-papers),
      :papers p,
      :users (users allusers user-papers user-chairs p s)}))
 
@@ -214,4 +227,6 @@
     (defonce session-chairs (session-chairs-map ch))
     (defonce user-chairs (user-chairs-map ch))
     (defonce p (papers rawpapers sessionmap paper-authors))
+    (defonce rawkeywords (all-keywords (cf/db conf) conf))
+    (defonce keyword-papers (keyword-papers-map rawpapers))
     (defonce s (sessions rawsessions session-papers session-chairs tsmap))))
