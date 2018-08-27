@@ -13,3 +13,4 @@ pom.xml.asc
 .nrepl-port
 .cpcache/
 env/euro_edn_conference_program/config.clj
+src/euro_edn_conference_program/export.clj
