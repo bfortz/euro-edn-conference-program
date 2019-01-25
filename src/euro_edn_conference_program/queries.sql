@@ -8,7 +8,7 @@ select id, name, `order` from clusters
 
 -- :name all-sessions :? :*
 -- :doc Get all sessions
-select id, code, name, day, time, track, cluster, specialroom from sessionchairs
+select id, code, name, day, time, track, cluster, specialroom from sessionchairs where day is not null
 
 -- :name all-rooms :? :*
 -- :doc Get all rooms 

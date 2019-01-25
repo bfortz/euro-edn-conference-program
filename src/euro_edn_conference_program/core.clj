@@ -97,7 +97,7 @@
             (make-map rawpapers f :id (partial paper->sessionid sessionmap)))
           (session-order [id] 
             (let [s (get sessions id)]
-              (+ (:track s) (* 100 (:timeslot s)))))] 
+              (if s (+ (:track s) (* 100 (:timeslot s))) 10000)))] 
     (let [kw1 (mm :keyword1)
           kw2 (mm :keyword2)
           kw3 (mm :keyword3)
@@ -169,26 +169,36 @@
 
 (defn program-data [conf]
   "Returns a hashmap with all the data of the program of conference conf"
-  (let [rawtimeslots (all-timeslots (cf/db conf) conf)
+  (let [
+        _  (println "Reading timeslots")
+        rawtimeslots (all-timeslots (cf/db conf) conf)
         tsmap (timeslot-map rawtimeslots)
+        _  (println "Reading papers")
         rawpapers (all-papers (cf/db conf) conf)
+        _  (println "Reading sessions")
         rawsessions (->> (all-sessions (cf/db conf) conf)
                          (filter #(some? (:day %))))
         sessionmap (to-hashmap :code rawsessions)
         timeslot-sessions (timeslot-sessions-map rawsessions tsmap)
+        _  (println "Reading streams")
         rawstreams (all-streams (cf/db conf) conf)
+        _  (println "Reading users")
         umap (users-by-username cf/userdb)
         stream-sessions (stream-sessions-map rawsessions tsmap)
         session-papers (session-papers-map rawpapers sessionmap)
+        _  (println "Reading coauthors")
         ca (convert-usernames all-coauthors umap conf)   
         paper-authors (paper-authors-map ca)
         user-papers (user-papers-map ca)
         ch (convert-usernames all-chairs umap conf)  
+        _  (println "Reading session chairs")
         session-chairs (session-chairs-map ch)
         user-chairs (user-chairs-map ch)
+        _  (println "Reading user profiles")
         allusers (all-profiles (cf/db cf/userdb) cf/userdb)
         p (papers rawpapers sessionmap paper-authors)
         s (sessions rawsessions session-papers session-chairs tsmap)
+        _  (println "Reading keywords")
         rawkeywords (all-keywords (cf/db conf) conf)
         keyword-sessions (keyword-sessions-map rawpapers s sessionmap tsmap)]
     {:timeslots (timeslots rawtimeslots timeslot-sessions) , 
@@ -197,7 +207,8 @@
      :rooms (rooms conf),
      :keywords (keywords rawkeywords keyword-sessions),
      :papers p,
-     :users (users allusers user-papers user-chairs p s)}))
+     :users (users allusers user-papers user-chairs p s)
+     }))
 
 (defn changed? [data filename]
   (try
@@ -219,7 +230,7 @@
   "useful for repl testing" 
   (do
     (set! *print-length* 10)
-    (defonce conf "or2018")
+    (defonce conf "ifors")
     (defonce rawtimeslots (all-timeslots (cf/db conf) conf))
     (defonce tsmap (timeslot-map rawtimeslots))
     (defonce allusers (all-profiles (cf/db cf/userdb) cf/userdb))
