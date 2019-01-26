@@ -33,7 +33,7 @@
 
 (defn sort-map-of-seqs-by [f m]
   "Sorts the seqs in a map m of seqs using function f"
-  (reduce #(assoc %1 (first %2) (sort-by f (second %2))) {} m))
+  (reduce #(assoc %1 (first %2) (sort-by f (filter identity (second %2)))) {} m))
 
 (defn inner-map [f m]
   "Apply f to all seqs in a map m of seqs"
@@ -127,7 +127,7 @@
   (->> rawsessions
        (map #(assoc % :papers (get session-papers (:id %))))
        (map #(assoc % :timeslot (get-in timeslots [(:day %) (:time %)])))
-       (map #(assoc % :chairs (get session-chairs (:id %))))
+       (map #(assoc % :chairs (filter identity (get session-chairs (:id %)))))
        (map #(assoc % :stream (:cluster %)))
        (map #(dissoc % :code :day :time :cluster))
        (to-hashmap :id)))
@@ -136,7 +136,7 @@
   "Returns a hashmap of papers by id, with session codes converted to session ids and an embedded list of authors"
   (->> rawpapers 
        (map #(assoc % :session (paper->sessionid sessionmap %)))   
-       (map #(assoc % :authors (get paper-authors (:id %))))
+       (map #(assoc % :authors (filter identity (get paper-authors (:id %)))))
        (map #(dissoc % :order :sessioncode))
        (to-hashmap :id)))
 
@@ -169,8 +169,7 @@
 
 (defn program-data [conf]
   "Returns a hashmap with all the data of the program of conference conf"
-  (let [
-        _  (println "Reading timeslots")
+  (let [_  (println "Reading timeslots")
         rawtimeslots (all-timeslots (cf/db conf) conf)
         tsmap (timeslot-map rawtimeslots)
         _  (println "Reading papers")
