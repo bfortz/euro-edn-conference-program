@@ -32,4 +32,4 @@ select * from cochairs
 
 -- :name all-profiles :? :*
 -- :doc Get all users profiles
-select users.id, users.username, users_info.firstname, users_info.lastname from users left join users_info on users.id = users_info.id
+select users.id, users.username, users_info.firstname, users_info.lastname, users_info.department, users_info.institution, countries.name as country from users left join users_info on users.id = users_info.id left join countries on users_info.country_id = countries.code
