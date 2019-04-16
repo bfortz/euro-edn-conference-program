@@ -1,6 +1,7 @@
 (ns euro-edn-conference-program.core 
   (:require [hugsql.core :as hugsql] 
             [clojure.set :as s]
+            [clojure.string :as st]
             [euro-edn-conference-program.config :as cf])
   (:gen-class))
 
@@ -55,7 +56,7 @@
 
 (defn paper->sessionid [sessionmap p]
   "Returns session id based on session code"
-  (:id (get sessionmap (:sessioncode p)))) 
+  (:id (get sessionmap (st/lower-case (:sessioncode p))))) 
 
 ;; Maps creation functions
 
@@ -129,6 +130,8 @@
        (map #(assoc % :timeslot (get-in timeslots [(:day %) (:time %)])))
        (map #(assoc % :chairs (filter identity (get session-chairs (:id %)))))
        (map #(assoc % :stream (:cluster %)))
+       ;; removes empty specialroom
+       (map #(if (:specialroom %) % (dissoc % :specialroom)))
        (map #(dissoc % :code :day :time :cluster))
        (to-hashmap :id)))
 
@@ -136,6 +139,7 @@
   "Returns a hashmap of papers by id, with session codes converted to session ids and an embedded list of authors"
   (->> rawpapers 
        (map #(assoc % :session (paper->sessionid sessionmap %)))   
+       (filter :session)
        (map #(assoc % :authors (filter identity (get paper-authors (:id %)))))
        (map #(dissoc % :order :sessioncode))
        (to-hashmap :id)))
@@ -177,7 +181,7 @@
         _  (println "Reading sessions")
         rawsessions (->> (all-sessions (cf/db conf) conf)
                          (filter #(some? (:day %))))
-        sessionmap (to-hashmap :code rawsessions)
+        sessionmap (to-hashmap #(st/lower-case (:code %)) rawsessions)
         timeslot-sessions (timeslot-sessions-map rawsessions tsmap)
         _  (println "Reading streams")
         rawstreams (all-streams (cf/db conf) conf)
