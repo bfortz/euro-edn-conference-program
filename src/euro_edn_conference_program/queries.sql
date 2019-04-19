@@ -4,7 +4,7 @@ select id, schedule, day, time from timeslots
 
 -- :name all-streams :? :*
 -- :doc Get all streams
-select id, name, `order` from clusters
+select id, name from clusters order by name
 
 -- :name all-sessions :? :*
 -- :doc Get all sessions
